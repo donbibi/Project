@@ -1,4 +1,4 @@
-# Project
+### Eyram Bansah, MD MPH
 
 ## Objective
 To explore the significance of "self-reported health" as a health indicator. 
