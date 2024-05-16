@@ -1,0 +1,338 @@
+<head>
+  <link rel="stylesheet" type="text/css" href="stmarkdown.css">
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+</script>
+<script type="text/javascript" async
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_CHTML">
+</script>
+</head>
+<h2><a href="#survival-analysis-project-for-intermediate-stata-programming" id="survival-analysis-project-for-intermediate-stata-programming">Survival Analysis Project for Intermediate Stata Programming</a></h2>
+<h3><a href="#non-parametric-and-semi-parametric-analysis" id="non-parametric-and-semi-parametric-analysis">Non-Parametric and Semi-Parametric Analysis</a></h3>
+<h4><a href="#eyram-bansah-md" id="eyram-bansah-md">Eyram Bansah, MD</a></h4>
+<p><strong>Setup Stata</strong></p>
+<pre><code>. // Clear the log and any existing data in memory
+.         cls
+
+.         clear   
+
+. // Sytem-defined constant                               
+.         global workdir `c(pwd)'         
+
+. // Set up global variables for data repositories
+.         global repo &quot;https://github.com/jhustata/project/raw/main/&quot;
+
+.         global nhanes &quot;https://wwwn.cdc.gov/Nchs/Nhanes/&quot;
+
+. **Load datasets for analysis**
+. // Execute the followup.do script from the repository
+. do ${repo}followup.do
+
+. save followup, replace 
+
+. // Import NHANES demographic data from 1999-2000
+. import sasxport5 &quot;${nhanes}1999-2000/DEMO.XPT&quot;, clear
+
+. // Merge the imported data with the &quot;followup&quot; data
+. merge 1:1 seqn using followup, nogen
+
+. save survey_followup, replace 
+
+. 
+. // Import additional parameters from NHANES health data
+. import sasxport5 &quot;${nhanes}1999-2000/HUQ.XPT&quot;, clear
+
+. tab huq010 
+
+. merge 1:1 seqn using survey_followup, nogen keep(matched)
+
+. // Remove intermediate datasets to free up space
+. rm followup.dta
+
+. rm survey_followup.dta
+
+. **Setup Survival Analysis**
+. // Create a new variable &quot;years&quot; by dividing &quot;permth_int&quot; by 12 to c
+&gt; onvert months to years
+. g years=permth_int/12
+
+. // Declare the survival-time data and specify &quot;mortstat&quot; as the fail
+&gt; ure event
+. stset years, fail(mortstat)
+
+. // Recode the &quot;huq010&quot; variable to missing if it equals 9 (unknown v
+&gt; alue)
+. replace huq010=. if huq010==9
+
+. label define huq 1 &quot;Excellent&quot; 2 &quot;Very Good&quot; 3 &quot;Good&quot; 4 &quot;Fair&quot; 5 &quot;Po
+&gt; or&quot;
+
+. label values huq010 huq 
+
+. // Get the levels of the &quot;huq010&quot; variable
+. levelsof huq010, local(numlevels)
+
+. local i=1
+
+. // Loop through the levels of &quot;huq010&quot; to create global legend label
+&gt; s
+. foreach l of numlist `numlevels' {
+
+. // Save the final dataset as &quot;week7.dta&quot;
+. save week7, replace 
+
+. 
+. // Generate a Kaplan-Meier survival graph by &quot;huq010&quot; levels
+. sts graph, ///
+&gt;         by(huq010) /// Group by self-reported health status
+&gt;         fail /// Display the failure function
+&gt;         per(100) /// Display percentages
+&gt;         ylab(0(20)80 , /// Label y-axis from 0 to 80 with increments
+&gt;  of 20
+&gt;                 format(%2.0f) /// Format y-axis labels as integers
+&gt;                 ) ///
+&gt;         xlab(0(5)20) /// Label x-axis from 0 to 20 with increments o
+&gt; f 5
+&gt;         tmax(20) /// Limit the x-axis to 20 years
+&gt;         ti(&quot;Self-Reported Health and Mortality&quot;) /// Title of the gr
+&gt; aph
+&gt;         legend( /// Customize the legend
+&gt;                 order(5 4 3 2 1) /// Order legend entries
+&gt;                 lab(1 &quot;$legend1&quot;) /// Label for &quot;Poor&quot; health status
+&gt;                 lab(2 &quot;$legend2&quot;) /// Label for &quot;Fair&quot; health status
+&gt;                 lab(3 &quot;$legend3&quot;) /// Label for &quot;Good&quot; health status
+&gt;                 lab(4 &quot;$legend4&quot;) /// Label for &quot;Very Good&quot; health s
+&gt; tatus
+&gt;                 lab(5 &quot;$legend5&quot;) /// Label for &quot;Excellent&quot; health s
+&gt; tatus
+&gt;                 ring(0) pos(11) /// Position the legend
+&gt;         )
+
+. // Export the graph as a PNG file
+. graph export nonpara.png, replace 
+
+</code></pre>
+<p><img src="Graph60.svg" ></p>
+<p>Figure 1. Kaplan-Meier Curves</p>
+<p><strong>Cox Proportional Hazards Regression</strong></p>
+<pre><code>. stcox i.huq010, basesurv(s0)
+
+. matrix define mat = r(table)
+
+. matrix list mat 
+
+. matrix mat = mat'
+
+. svmat mat
+
+. preserve 
+
+. keep mat*
+
+. drop if missing(mat1)
+
+. rename (mat1 mat2 mat3 mat4 mat5 mat6 mat7 mat8 mat9)(b se z p ll ul
+&gt;  df crit eform)
+
+. g x=_n
+
+. replace b=log(b)
+
+. replace ll=log(ll)
+
+. replace ul=log(ul)
+
+. twoway (scatter b x) || ///
+&gt;            (rcap ll ul x, ///
+&gt;                    yline(0, lcol(lime)) ///
+&gt;                    ylab( ///
+&gt;                            -2.08 &quot;0.125&quot; ///
+&gt;                            -1.39 &quot;0.25&quot; ///
+&gt;                            -.69 &quot;0.5&quot; ///
+&gt;                                  0 &quot;1&quot;  ///
+&gt;                            .69 &quot;2&quot; ///
+&gt;                            1.39 &quot;4&quot; ///
+&gt;                            2.08 &quot;8&quot; ///
+&gt;                            2.78 &quot;16&quot;) ///
+&gt;                    legend(off)  ///
+&gt;                 xlab( ///
+&gt;                    1 &quot;$legend1&quot; ///
+&gt;                    2 &quot;$legend2&quot; ///
+&gt;                    3 &quot;$legend3&quot; ///
+&gt;                    4 &quot;$legend4&quot; ///
+&gt;                    5 &quot;$legend5&quot;) ///
+&gt;            xti(&quot;Self-Reported Health&quot;) ///
+&gt;                    ) 
+
+. graph export semipara_unadj.png, replace 
+
+. graph save semipara_unadj.gph, replace 
+
+. restore 
+
+. 
+</code></pre>
+<p><img src="Graph61.svg" ></p>
+<p>Figure 2. Unadjusted Cox Regression</p>
+<pre><code>. **hist ridageyr 
+. **graph export nonpara.png, replace 
+. //replace ridageyr=ridageyr/10
+. capture drop s0 
+
+. stcox i.huq010 ridageyr riagendr, basesurv(s0)
+
+. return list
+
+. matrix define mat_adj=r(table)
+
+. matrix define mat_adj=mat_adj'
+
+. matrix list mat_adj
+
+. svmat mat_adj
+
+. keep mat_adj*
+
+. drop if missing(mat_adj1)
+
+. rename (mat_adj1 mat_adj2 mat_adj3 mat_adj4 mat_adj5 mat_adj6 mat_ad
+&gt; j7 mat_adj8 mat_adj9)(b se z p ll ul df crit eform)
+
+. g x=_n
+
+. replace b=log(b)
+
+. replace ll=log(ll)
+
+. replace ul=log(ul)
+
+. twoway (scatter b x if inrange(x,1,5)) || ///
+&gt;            (rcap ll ul x if inrange(x,1,5), ///
+&gt;                    yline(0, lcol(lime)) ///
+&gt;                    ylab( ///
+&gt;                            -2.08 &quot;0.125&quot; ///
+&gt;                            -1.39 &quot;0.25&quot; ///
+&gt;                            -.69 &quot;0.5&quot; ///
+&gt;                                  0 &quot;1&quot;  ///
+&gt;                            .69 &quot;2&quot; ///
+&gt;                            1.39 &quot;4&quot; ///
+&gt;                            2.08 &quot;8&quot; ///
+&gt;                            2.78 &quot;16&quot;) ///
+&gt;                    legend(off)  ///
+&gt;                 xlab( ///
+&gt;                    1 &quot;$legend1&quot; ///
+&gt;                    2 &quot;$legend2&quot; ///
+&gt;                    3 &quot;$legend3&quot; ///
+&gt;                    4 &quot;$legend4&quot; ///
+&gt;                    5 &quot;$legend5&quot;) ///
+&gt;            xti(&quot;Self-Reported Health&quot;) ///
+&gt;                    ) 
+
+. graph export semipara_adj.png, replace 
+
+. graph save semipara_adj.gph, replace 
+
+</code></pre>
+<p><img src="Graph62.svg" ></p>
+<p>Figure 3. Adjusted Hazard Ratio by Self-Reported Health</p>
+<pre><code>. graph combine semipara_unadj.gph semipara_adj.gph, ///
+&gt;         ycommon ti(&quot;Hazard Ratio, 95%CI&quot;) 
+
+. graph export unadj_adj.png, replace 
+
+</code></pre>
+<p><img src="Graph63.svg" ></p>
+<p>Figure 4. Unadjusted vs Adjusted Hazard Ratio (95% CI)</p>
+<pre><code>. cls 
+
+. use week7, clear
+
+. replace riagendr=riagendr-1
+
+. stcox i.huq010 ridageyr riagendr, basesurv(s0)
+
+. keep s0 _t _t0 _st _d 
+
+. save s0, replace 
+
+. ereturn list 
+
+. matrix beta = e(b)
+
+. matrix vcov = e(V)
+
+. matrix SV = ( ///
+&gt;         0, ///
+&gt;         1, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         40, ///
+&gt;         1 ///
+&gt; )
+
+. matrix SV_ref = ( ///
+&gt;         0, ///
+&gt;         1, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         0, ///
+&gt;         60, ///
+&gt;         1 ///
+&gt; )
+
+. //absolute risk
+. matrix risk_score = SV * beta'
+
+. matrix list risk_score
+
+. di exp(risk_score[1,1])
+
+. matrix var_prediction = SV * vcov * vcov'
+
+. matrix se_prediction = sqrt(var_prediction[1,1])
+
+. 
+. matrix risk_score_ref = SV_ref * beta'
+
+. matrix list risk_score_ref
+
+. di exp(risk_score_ref[1,1])
+
+. matrix var_prediction_ref = SV_ref * vcov * vcov'
+
+. matrix se_prediction_ref = sqrt(var_prediction_ref[1,1])
+
+. 
+. local hr = exp(risk_score_ref[1,1])/exp(risk_score[1,1])
+
+. di `hr'
+
+. 
+. //di &quot;We conclude that `exp(risk_score[1,1])'&quot;
+. 
+. //
+. g f0 = (1 - s0) * 100 
+
+. g f1_ = f0 * exp(risk_score[1,1])
+
+. line f1 _t , ///  
+&gt;         sort connect(step step) ///
+&gt;         legend(ring(0)) ///
+&gt;         ylab(0(5)20) xlab(0(5)20) ///
+&gt;         yti(&quot;&quot;) ///
+&gt;         ti(&quot;Scenario, %&quot;, pos(11)) ///
+&gt;         xti(&quot;Years&quot;) ///
+&gt;         note(&quot;40yo male who self-describes as being in good health&quot; 
+&gt; ///
+&gt;                                   ,size(1.5) ///
+&gt;                 )
+
+. graph export scenario.png, replace 
+
+</code></pre>
+<p><img src="Graph64.svg" ></p>
+<p>Figure 5. Scenario</p>
+<p><strong>Conclusion</strong> This study demonstrates a significant association between self-reported health status and mortality risk. We observed that lower self-reported health corresponds to an increased risk of mortality. Specifically, the hazard ratios (HR) indicate that as the perceived health status declines, the likelihood of mortality rises.</p>
+<p>Our analysis revealed that the unadjusted hazard ratios were consistently higher than the adjusted hazard ratios. This suggests that when controlling for other factors such as age and gender, the direct impact of self-reported health on mortality is somewhat attenuated,yet remains significant.</p>
+<p>In summary, self-reported health status is a strong predictor of mortality, with lower health ratings associated with higher mortality risks. This underscores the importance of self-perception in health outcomes and supports the inclusion of self-reported health measures in risk assessments and clinical evaluations.</p>
