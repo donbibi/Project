@@ -67,4 +67,4 @@ Obtain follow-up mortality data to analyze over a 20-year period from the Nation
     ```
 ## Survival Analysis: Non-parametric and Semi-Parametric  
 
-click [here](https://donbibi.github.io/Project/) to view nonparametric and semiparametric risk estimates from Stata
+click [here](dyndoc.html) to view nonparametric and semiparametric risk estimates from Stata
