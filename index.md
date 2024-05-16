@@ -1,4 +1,4 @@
-### Eyram Bansah, MD MPH
+### Eyram Bansah, MD
 
 ## Objective
 To explore the significance of "self-reported health" as a health indicator. 
@@ -43,3 +43,28 @@ Obtain follow-up mortality data to analyze over a 20-year period from the Nation
       merge 1:1 seqn using followup
       lookfor follow
     ```
+
+## Preparing Key Parameters for Week 7 Analysis
+
+    ```stata
+    global repo "https://github.com/jhustata/intermediate/raw/main/"
+    do ${repo}followup.do
+    save followup, replace 
+    import sasxport5 "https://wwwn.cdc.gov/Nchs/Nhanes/1999-2000/DEMO.XPT", clear
+    merge 1:1 seqn using followup
+    lookfor follow
+    lookfor mortstat permth_int eligstat 
+    keep if eligstat==1
+    capture g years=permth_int/12
+    codebook mortstat
+    stset years, fail(mortstat)
+    sts graph, fail
+    save demo_mortality, replace 
+    import sasxport5 "https://wwwn.cdc.gov/Nchs/Nhanes/1999-2000/HUQ.XPT", clear 
+    merge 1:1 seqn using demo_mortality, nogen
+    sts graph, by(huq010) fail
+    stcox i.huq010 
+    ```
+## Survival Analysis: Non-parametric and Semi-Parametric  
+
+click [here](https://donbibi.github.io/Project/) to view nonparametric and semiparametric risk estimates from Stata
