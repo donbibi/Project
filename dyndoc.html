@@ -112,7 +112,7 @@
 . graph export nonpara.png, replace 
 
 </code></pre>
-<p><img src="Graph60.svg" ></p>
+<p><img src="Graph55.svg" ></p>
 <p>Figure 1. Kaplan-Meier Curves</p>
 <p><strong>Cox Proportional Hazards Regression</strong></p>
 <pre><code>. stcox i.huq010, basesurv(s0)
@@ -172,7 +172,7 @@
 
 . 
 </code></pre>
-<p><img src="Graph61.svg" ></p>
+<p><img src="Graph56.svg" ></p>
 <p>Figure 2. Unadjusted Cox Regression</p>
 <pre><code>. **hist ridageyr 
 . **graph export nonpara.png, replace 
@@ -233,7 +233,7 @@
 . graph save semipara_adj.gph, replace 
 
 </code></pre>
-<p><img src="Graph62.svg" ></p>
+<p><img src="Graph57.svg" ></p>
 <p>Figure 3. Adjusted Hazard Ratio by Self-Reported Health</p>
 <pre><code>. graph combine semipara_unadj.gph semipara_adj.gph, ///
 &gt;         ycommon ti(&quot;Hazard Ratio, 95%CI&quot;) 
@@ -241,7 +241,7 @@
 . graph export unadj_adj.png, replace 
 
 </code></pre>
-<p><img src="Graph63.svg" ></p>
+<p><img src="Graph58.svg" ></p>
 <p>Figure 4. Unadjusted vs Adjusted Hazard Ratio (95% CI)</p>
 <pre><code>. cls 
 
@@ -331,7 +331,7 @@
 . graph export scenario.png, replace 
 
 </code></pre>
-<p><img src="Graph64.svg" ></p>
+<p><img src="Graph59.svg" ></p>
 <p>Figure 5. Scenario</p>
 <p><strong>Conclusion</strong> This study demonstrates a significant association between self-reported health status and mortality risk. We observed that lower self-reported health corresponds to an increased risk of mortality. Specifically, the hazard ratios (HR) indicate that as the perceived health status declines, the likelihood of mortality rises.</p>
 <p>Our analysis revealed that the unadjusted hazard ratios were consistently higher than the adjusted hazard ratios. This suggests that when controlling for other factors such as age and gender, the direct impact of self-reported health on mortality is somewhat attenuated,yet remains significant.</p>
